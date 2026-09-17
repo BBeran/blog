@@ -8,7 +8,7 @@ Description: Compare Firestore and MongoDB Atlas on GCP as migration targets for
 
 ---
 
-When your MongoDB databases need to move to Google Cloud, you have two solid options: migrate to Google Cloud Firestore (a fully managed NoSQL database native to GCP) or run MongoDB Atlas on GCP infrastructure (a managed MongoDB service that runs on Google's cloud). These are fundamentally different choices. Firestore means adopting a new database with a different data model and API. Atlas means keeping MongoDB but running it as a managed service. Let me walk through both paths.
+When your MongoDB databases need to move to Google Cloud, you have two solid options: migrate to Google Cloud Firestore (a fully managed, serverless NoSQL database native to GCP) or run MongoDB Atlas on GCP infrastructure (a managed MongoDB service that runs on Google's cloud). If you choose Firestore you can also choose between using Firestore's own APIs or its MongoDB wire-compatible API.  These are fundamentally different choices. Using Firestore APIs means adopting a new database with a different data model and API. Using MongoDB Atlas or Firestore's MongoDB compatibility means keeping your code as is but running it as a managed service. Let me walk through both paths.
 
 ## Option 1 - MongoDB Atlas on GCP
 
@@ -101,27 +101,32 @@ client = MongoClient(
 db = client.myapp
 orders = db.orders.find({"status": "pending"}).sort("created_at", -1).limit(10)
 ```
+## Option 2 - Firestore with MongoDB compatibility
 
-## Option 2 - Google Cloud Firestore
+If you want to keep using your MongoDB code as-is, but want to move to a serverless database, Firestore's MongoDB compatible API is the lowest-friction path. Since Firestore is wire-compatible with MongoDB, all MongoDB client libraries, CLI tools like mongosh, mongoimport, mongoexport, mongorestore, mongodump and GUIs like Compass work seamlessly. Your application code stays the same, your queries stay the same, and your data model stays the same. You are just making a connection string change. Once you migrate you can use either the native APIs or MongoDB APIs because Firestore allows you to access the database using different APIs simultaneously. 
 
-Migrating to Firestore means changing your database technology. Your data model needs to be restructured from MongoDB's document model to Firestore's collection/document hierarchy. This is more work upfront but gives you deeper GCP integration.
+## Option 3 - Firestore native APIs
+
+Using to Firestore's proprietary APIs means changing your application code. Your data model now also supports new constructs like sub-documents unlike MongoDB's document model which handles all the nesting in a single document. This might involve more work upfront but gives you more data modeling flexibility and deeper GCP integration.
 
 ### Key Differences Between MongoDB and Firestore
 
-| Feature | MongoDB | Firestore |
+| Feature | MongoDB | Firestore with MongoDB compatibility | Firestore Native API |
 |---------|---------|-----------|
-| Query language | MQL (MongoDB Query Language) | Firestore query API |
-| Aggregation | Aggregation pipeline | Limited read-time count, sum, and average queries (use BigQuery for analytics) |
-| Indexes | Compound, text, geospatial | Auto single-field, manual composite |
-| Transactions | Multi-document ACID | Multi-document ACID (subject to request size and transaction time limits) |
-| Max document size | 16 MiB | 1 MiB |
-| Joins/lookups | $lookup aggregation | Not supported (denormalize) |
-| Real-time updates | Change streams | Built-in real-time listeners |
-| Nested arrays | Deeply nested, queryable | Limited query support on nested arrays |
+| Query language | MQL (MongoDB Query Language) | MQL (MongoDB Query Language) | Firestore query API |
+| Aggregation | Aggregation pipeline  | Aggregation pipeline | Pipeline queries |
+| Indexes | Compound, text, geospatial | Compound, text, geospatial | Compound, text, geospatial |
+| Transactions | Multi-document ACID | Multi-document ACID | Multi-document ACID |
+| Max document size | 16 MiB | 16 MiB | 16 MiB |
+| Joins/lookups | $lookup aggregation | $lookup aggregation | addFields pipeline stage |
+| Max Nesting Depth | 100 levels | 20 levels | 100 levels via sub-collections |
+| Real-time updates | Change streams | Change streams | Built-in real-time listeners |
+
+Note that Firestore offers a Standard and an Enterprise Edition. This comparison is based on Firestore Enterprise Edition.
 
 ### Data Model Conversion
 
-MongoDB and Firestore both store documents, but the modeling patterns differ:
+MongoDB and Firestore both store documents, but if you don't use Firestore's MongoDB compatibility option, the patterns differ especially when it comes to nesting:
 
 ```python
 # MongoDB document structure
@@ -279,29 +284,35 @@ for order in expensive_orders:
 
 ### Choose MongoDB Atlas on GCP when:
 
-1. Your application is heavily dependent on MongoDB's query language and aggregation framework
-2. You have extensive MongoDB-specific logic in your application
+1. Your application is heavily dependent on MongoDB's query language and aggregation framework and you rely on more than 20 levels of nesting
+2. You have extensive MongoDB-specific logic in your application that relies on some obscure MongoDB features so 100% compatibility is required
 3. The migration timeline is tight and you cannot afford to rewrite data access code
-4. You need features like change streams, aggregation pipelines, or text search
-5. Your documents exceed 1 MiB in size
 
-### Choose Firestore when:
+
+### Choose Firestore with MongoDB compatibility when:
+
+1. Your application is heavily dependent on MongoDB's query language and aggregation framework but you don't rely on deeply nested documents
+2. You have extensive MongoDB-specific logic in your application but you're using common operators that Firestore's MongoDB compatible API also supports
+3. The migration timeline is tight and you cannot afford to rewrite data access code
+4. You want to eliminate database operations entirely (Firestore is fully managed with auto-scaling)
+
+
+### Choose Firestore Native APIs when:
 
 1. You are building new features and can restructure the data model
 2. You want deep integration with Firebase, Cloud Functions, and other GCP services
 3. Real-time synchronization to mobile or web clients is important
 4. You want to eliminate database operations entirely (Firestore is fully managed with auto-scaling)
-5. Your data model can work within Firestore's constraints (1 MiB document size, limited query operators)
 
 ## Hybrid Approach
 
-Some teams migrate to Atlas initially for speed, then gradually move specific collections to Firestore where the native GCP integration adds value. This gives you a safe starting point with the option to optimize later.
+Some teams migrate to Atlas or Firestore with MongoDB compatibility initially for speed, then gradually use specific queries or collections to Firestore where the native GCP integration adds value. This gives you a safe starting point with the option to optimize later. Firestore also supports using both APIs on the same database so over time you can mix-and-match capabilities between the native API and MongoDB API. This allows you to get added benefits like real-time sync from Firestore while using your existing MongoDB code for everything else to get the best of both worlds.
 
 ## Cost Comparison
 
 - **MongoDB Atlas M30 on GCP**: fixed hourly cluster pricing that varies by region, storage, backup, and configuration
 - **Firestore**: pay-per-operation pricing with a generous free tier (50K reads, 20K writes per day free)
 
-For read-heavy workloads with moderate data volume, Firestore can be significantly cheaper. For write-heavy workloads with complex queries, Atlas pricing may be more predictable.
+For read-heavy workloads with daily fluctuations, Firestore can be significantly cheaper. For steady workloads, Atlas's provisioned pricing pricing may be more predictable.
 
-Choose based on your application's needs, not just cost. Rewriting your entire data access layer to save a few hundred dollars a month is rarely worth it. But if you are building new services from scratch on GCP, Firestore is the more natural choice.
+Choose based on your application's needs, not just cost. Rewriting your entire data access layer to save a few hundred dollars a month is rarely worth it.
