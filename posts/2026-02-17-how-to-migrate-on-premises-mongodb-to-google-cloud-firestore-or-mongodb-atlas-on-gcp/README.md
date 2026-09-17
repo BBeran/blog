@@ -12,7 +12,7 @@ When your MongoDB databases need to move to Google Cloud, you have two solid opt
 
 ## Option 1 - MongoDB Atlas on GCP
 
-If you want to keep using MongoDB as-is, Atlas on GCP is the lowest-friction path. Your application code stays the same, your queries stay the same, and your data model stays the same. You are just moving from self-managed MongoDB to a managed service.
+If you want to keep using MongoDB as-is, Atlas on GCP is the lowest-friction path especially if your storage volume isn't high. Your application code stays the same, your queries stay the same, and your data model stays the same. You are just moving from self-managed MongoDB to a managed service. Data volume is an important consideration and can cause friction during migration because MongoDB Atlas enforces limits on per-shard data volume that do not apply to self-managed MongoDB. 
 
 ### Setting Up Atlas on GCP
 
@@ -111,11 +111,12 @@ Using to Firestore's proprietary APIs means changing your application code. Your
 
 ### Key Differences Between MongoDB and Firestore
 
-| Feature | MongoDB | Firestore with MongoDB compatibility | Firestore Native API |
+| Feature | MongoDB Atlas | Firestore with MongoDB compatibility | Firestore Native API |
 |---------|---------|-----------|
 | Query language | MQL (MongoDB Query Language) | MQL (MongoDB Query Language) | Firestore query API |
 | Aggregation | Aggregation pipeline  | Aggregation pipeline | Pipeline queries |
 | Indexes | Compound, text, geospatial | Compound, text, geospatial | Compound, text, geospatial |
+| Storage | Per shard storage limits | Unlimited, compute and storage scale independently | Unlimited, compute and storage scale independently |
 | Transactions | Multi-document ACID | Multi-document ACID | Multi-document ACID |
 | Max document size | 16 MiB | 16 MiB | 16 MiB |
 | Joins/lookups | $lookup aggregation | $lookup aggregation | addFields pipeline stage |
