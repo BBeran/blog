@@ -112,7 +112,7 @@ Using to Firestore's proprietary APIs means changing your application code. Your
 ### Key Differences Between MongoDB and Firestore
 
 | Feature | MongoDB Atlas | Firestore with MongoDB compatibility | Firestore Native API |
-|---------|---------|-----------|
+|---------|---------|-----------|-----------|
 | Query language | MQL (MongoDB Query Language) | MQL (MongoDB Query Language) | Firestore query API |
 | Aggregation | Aggregation pipeline  | Aggregation pipeline | Pipeline queries |
 | Indexes | Compound, text, geospatial | Compound, text, geospatial | Compound, text, geospatial |
